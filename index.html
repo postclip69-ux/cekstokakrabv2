@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cek Stok Akrab</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #f9fafb;
+            --card-bg: #ffffff;
+            --text-color: #111827;
+            --subtext-color: #6b7280;
+            --border-color: #e5e7eb;
+            --shadow-color: rgba(0, 0, 0, 0.05);
+            --success-color: #10b981;
+            --danger-color: #ef4444;
+            --success-bg: #ecfdf5;
+            --danger-bg: #fef2f2;
+        }
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            font-size: 2rem;
+            font-weight: 600;
+        }
+        
+        .header p {
+            color: var(--subtext-color);
+            font-size: 1rem;
+            margin-top: 5px;
+        }
+        
+        #loader {
+            text-align: center;
+            padding: 50px;
+            font-size: 1.2rem;
+            color: var(--subtext-color);
+        }
+        
+        .stock-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+        }
+        
+        .stock-card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 6px -1px var(--shadow-color);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        
+        .stock-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px -3px var(--shadow-color);
+        }
+        
+        .card-header {
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .product-name {
+            font-size: 1.1rem;
+            font-weight: 600;
+            line-height: 1.4;
+        }
+        
+        .card-body p {
+            font-size: 0.95rem;
+            color: var(--subtext-color);
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .card-body p span:first-child {
+            font-weight: 500;
+        }
+        
+        .price {
+            font-weight: 600;
+            color: var(--text-color);
+        }
+        
+        .status {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            text-transform: uppercase;
+        }
+        
+        .status.ready {
+            color: var(--success-color);
+            background-color: var(--success-bg);
+        }
+        
+        .status.empty {
+            color: var(--danger-color);
+            background-color: var(--danger-bg);
+        }
+        
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            color: var(--subtext-color);
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>Stok Produk Akrab</h1>
+            <p>Status stok produk secara real-time</p>
+        </header>
+        
+        <main>
+            <div id="loader">Memuat data...</div>
+            <div id="stock-grid" class="stock-grid"></div>
+        </main>
+
+        <footer class="footer">
+            <p>&copy; <span id="year"></span>. All rights reserved.</p>
+        </footer>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const grid = document.getElementById('stock-grid');
+            const loader = document.getElementById('loader');
+            
+            // --- INI BAGIAN KUNCI ---
+            // URL sekarang menunjuk ke proxy kita sendiri
+            const apiUrl = '/api/get-stock';
+            
+            document.getElementById('year').textContent = new Date().getFullYear();
+
+            const formatRupiah = (number) => {
+                return new Intl.NumberFormat('id-ID', {
+                    style: 'currency',
+                    currency: 'IDR',
+                    minimumFractionDigits: 0
+                }).format(number);
+            };
+
+            const fetchStock = async () => {
+                try {
+                    const response = await fetch(apiUrl);
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    
+                    const result = await response.json();
+                    
+                    loader.style.display = 'none';
+
+                    if (result.success && Array.isArray(result.data)) {
+                        result.data.forEach(item => {
+                            const card = document.createElement('div');
+                            card.className = 'stock-card';
+
+                            const statusClass = item.status.toLowerCase() === 'ready' ? 'ready' : 'empty';
+                            const statusText = item.status.toLowerCase() === 'ready' ? 'Tersedia' : 'Kosong';
+                            
+                            card.innerHTML = `
+                                <div class="card-header">
+                                    <h2 class="product-name">${item.nama_produk}</h2>
+                                </div>
+                                <div class="card-body">
+                                    <p>
+                                        <span>Harga</span>
+                                        <span class="price">${formatRupiah(item.harga)}</span>
+                                    </p>
+                                    <p>
+                                        <span>Status</span>
+                                        <span class="status ${statusClass}">${statusText}</span>
+                                    </p>
+                                </div>
+                            `;
+                            grid.appendChild(card);
+                        });
+                    } else {
+                        grid.innerHTML = '<p>Gagal memuat data atau format data tidak sesuai.</p>';
+                    }
+
+                } catch (error) {
+                    loader.style.display = 'none';
+                    grid.innerHTML = `<p>Terjadi kesalahan saat mengambil data: ${error.message}. Silakan coba muat ulang halaman.</p>`;
+                    console.error("Fetch error: ", error);
+                }
+            };
+
+            fetchStock();
+        });
+    </script>
+</body>
+  </html>
+  
